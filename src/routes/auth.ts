@@ -1,0 +1,7 @@
+import {Router} from "express"; import {z} from "zod"; import {admin} from "../lib/supabase.js"; import {requireAuth} from "../middleware/auth.js";
+const r=Router();
+r.post("/signup",async(req,res,next)=>{try{const b=z.object({email:z.string().email(),password:z.string().min(8),fullName:z.string().min(1),phone:z.string().optional()}).parse(req.body);const {data,error}=await admin.auth.admin.createUser({email:b.email,password:b.password,email_confirm:false,user_metadata:{full_name:b.fullName,phone:b.phone??null}});if(error)return res.status(400).json({error:error.message});res.status(201).json({user:data.user});}catch(e){next(e);}});
+r.post("/login",async(req,res,next)=>{try{const b=z.object({email:z.string().email(),password:z.string().min(1)}).parse(req.body);const {data,error}=await admin.auth.signInWithPassword(b);if(error)return res.status(401).json({error:"authentication_failed"});res.json({user:data.user,access_token:data.session?.access_token,refresh_token:data.session?.refresh_token,expires_at:data.session?.expires_at});}catch(e){next(e);}});
+r.post("/logout",requireAuth,(_req,res)=>res.json({ok:true}));
+r.post("/password/forgot",async(req,res,next)=>{try{const b=z.object({email:z.string().email()}).parse(req.body);const {error}=await admin.auth.resetPasswordForEmail(b.email);if(error)return res.status(400).json({error:"password_reset_request_failed"});res.json({ok:true});}catch(e){next(e);}});
+export default r;

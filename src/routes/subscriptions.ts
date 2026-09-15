@@ -1,0 +1,5 @@
+import {Router} from "express";import {z} from "zod";import {requireAuth} from "../middleware/auth.js";import {requireMember} from "../lib/business.js";
+const r=Router();
+r.get("/",requireAuth,async(req,res,next)=>{try{const id=z.string().uuid().parse(req.query.business_id);await requireMember(req.auth!.client,req.auth!.userId,id);const {data,error}=await req.auth!.client.from("subscriptions").select("*").eq("business_id",id).maybeSingle();if(error)throw error;res.json({subscription:data});}catch(e){next(e);}});
+r.post("/",requireAuth,async(req,res,next)=>{try{const b=z.object({business_id:z.string().uuid(),plan:z.enum(["starter","business","pro"])}).parse(req.body);await requireMember(req.auth!.client,req.auth!.userId,b.business_id);const {data,error}=await req.auth!.client.from("subscriptions").upsert({business_id:b.business_id,plan:b.plan,status:"intent"},{onConflict:"business_id"}).select("*").single();if(error)throw error;res.status(201).json({subscription:data});}catch(e){next(e);}});
+export default r;
